@@ -2,40 +2,43 @@
 
 Very simple dotfiles installer.
 
-main files:
+## Core Files
 
-- `config.sh` - configuration file containing the links and steps
-- `run.sh` - script that reads `config.sh`, creates symlinks and executes steps
-- `install.sh` - wrapper that calls `run.sh` with `config.sh` (optional)
+- `config.sh` - configuration file defining symlinks and installation steps
+- `run.sh` - main installer that processes config and creates symlinks
+- `install.sh` - convenient wrapper script (recommended entry point)
 
-configs in `config/` and `scripts/` directory are examples how it can be used, adjust them to your needs.
+Example configs in `config/` and `scripts/` directories show typical usage patterns - customize them for your setup.
 
-Usage:
-You can copy the main files or fork this repository
+## Usage
 
-Basic usage:
+Fork this repository or copy the main files to get started.
+
+### Basic Commands
 
 ```bash
-./run.sh -c config.sh          # Run with config
+./install.sh                   # Full installation
 ./install.sh --dry-run          # Preview changes without executing
-./install.sh --verbose          # Detailed installation with debug info
+./install.sh --verbose          # Detailed output with debug info
+./run.sh -c config.sh          # Use run.sh directly with specific config
 ```
 
-#### LINKS Array
+## Configuration
+
+### LINKS Array
 
 - Format: `"repo-relative-source:absolute-or-~-destination"`
-- Source paths are relative to your repository root
-- Destination paths can use `~` for home directory
-- Use absolute paths for destinations outside home directory
-- Comments supported with `#` prefix
+- Source paths relative to repository root
+- Destinations support `~` for home directory or absolute paths
+- Comments allowed with `#` prefix
 
-#### STEPS Array
+### STEPS Array
 
-- Shell commands executed in order from repository root
+- Shell commands executed sequentially from repository root
 - 5-minute timeout per step (when `timeout`/`gtimeout` available)
-- Use `|| true` suffix for optional steps
-- Avoid commands that require user interaction
-- Comments supported with `#` prefix
+- Use `|| true` for optional steps that may fail
+- Avoid interactive commands
+- Comments allowed with `#` prefix
 
 ## License
 
@@ -43,4 +46,4 @@ This project is in the public domain. Feel free to use, modify, and distribute a
 
 ## Inspiration
 
-This dotfiles installer takes inspiration from tools like [dotbot](https://github.com/anishathalye/dotbot) but focuses on:
+This dotfiles installer draws inspiration from tools like [dotbot](https://github.com/anishathalye/dotbot) but emphasizes simplicity and minimal dependencies.
