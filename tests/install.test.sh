@@ -22,8 +22,10 @@ readonly INSTALL_SCRIPT="$SCRIPT_DIR/run.sh"
 readonly CONFIG_FILE="$SCRIPT_DIR/config.sh"
 
 # ---------- global variables ----------
-declare -g use_color=1 is_tty=0 verbose_mode=0
-declare -g test_failures=0
+use_color=1
+is_tty=0
+verbose_mode=0
+test_failures=0
 
 # ---------- initialization ----------
 [[ -t 1 ]] && is_tty=1

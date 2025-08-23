@@ -22,16 +22,17 @@ Fork this repository or copy the main files to get started.
 ./install.sh --verbose          # Detailed output with debug info
 ./run.sh -c config.sh          # Use run.sh directly with specific config
 cat config.sh | ./run.sh       # Pipe config via stdin
+./run.sh --links-only          # Only process symlinks (skip steps)
+./run.sh --steps-only          # Only run steps (skip symlinks)
 ```
 
 ## Configuration
 
-Configuration must be provided via:
+Configuration can be provided via:
 
 - **Parameter**: `./run.sh -c config.sh`
 - **Pipe**: `cat config.sh | ./run.sh`
-
-No autodetection of config files is performed.
+- **Default**: `config.sh` in the same directory as `run.sh` (auto-detected)
 
 **Config structure**
 
@@ -56,10 +57,15 @@ No autodetection of config files is performed.
 ### STEPS Array
 
 - Shell commands executed sequentially from repository root
-- 5-minute timeout per step (when `timeout`/`gtimeout` available)
 - Use `|| true` for optional steps that may fail
 - Avoid interactive commands
 - Comments allowed with `#` prefix
+
+## Behavior
+
+- **Backups**: Existing files are backed up to `~/.dotfiles-backup-YYYYmmdd-HHMMSS/` preserving original paths. Prefers `rsync -a` if available, falls back to portable `cp -pPR`.
+- **Idempotency**: Correct existing symlinks are left untouched. Regular files identical to sources are not backed up again before replacement.
+- **Locking**: Prevents concurrent runs using `~/.dotfiles-install.lock`. If a previous run crashed, remove the lock directory to proceed.
 
 ## License
 
