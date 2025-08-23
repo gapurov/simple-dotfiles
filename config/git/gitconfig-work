@@ -1,0 +1,25 @@
+# Example work-specific git configuration
+# This demonstrates how you might have environment-specific configs
+
+[user]
+    name = Your Work Name
+    email = you@company.com
+
+[core]
+    autocrlf = input
+
+[push]
+    default = current
+
+[pull]
+    rebase = true
+
+[branch]
+    autosetuprebase = always
+
+[alias]
+    st = status
+    co = checkout
+    br = branch
+    ci = commit
+    unstage = reset HEAD --

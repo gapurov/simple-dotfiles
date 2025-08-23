@@ -1,0 +1,21 @@
+# Environment variables and path configuration
+export EDITOR=vim
+export PAGER=less
+export BROWSER=open
+
+# Prepend user bin if present
+if [ -d "$HOME/bin" ]; then
+    PATH="$HOME/bin:$PATH"
+fi
+
+# Add local bin paths
+if [ -d "$HOME/.local/bin" ]; then
+    PATH="$HOME/.local/bin:$PATH"
+fi
+
+# Node.js global modules (if using npm)
+if [ -d "$HOME/.npm-global/bin" ]; then
+    PATH="$HOME/.npm-global/bin:$PATH"
+fi
+
+export PATH
