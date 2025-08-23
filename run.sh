@@ -42,7 +42,7 @@ debug() { [[ "$VERBOSE" == true ]] && printf "%b[DEBUG] %s%b\n" "$GRAY" "$1" "$N
 
 determine_config() {
     debug "Determining configuration source..."
-    
+
     if [[ -n "$CONFIG_FILE" ]]; then
         # Config file specified via CLI
         if [[ ! -f "$CONFIG_FILE" ]]; then
@@ -62,7 +62,7 @@ determine_config() {
         error "No config file specified. Use -c option to specify a config file."
         return 1
     fi
-    
+
     # Convert to absolute path
     CONFIG_FILE="$(cd "$(dirname "$CONFIG_FILE")" && pwd)/$(basename "$CONFIG_FILE")"
     debug "Final config: $CONFIG_FILE, repo: $REPO_DIR"
@@ -336,7 +336,6 @@ execute_step() {
             fi
         fi
     else
-        info "Would execute: $step_command"
         STEPS_PROCESSED=$((STEPS_PROCESSED + 1))
         return 0
     fi
@@ -344,6 +343,10 @@ execute_step() {
 
 process_steps() {
     log "Processing installation steps..."
+
+    if [[ "$DRY_RUN" == true ]]; then
+        info "DRY RUN: Showing all installation steps that would be executed:"
+    fi
 
     for step in "${STEPS[@]}"; do
         if [[ -z "$step" ]]; then
@@ -354,6 +357,10 @@ process_steps() {
         if [[ "$step" =~ ^[[:space:]]*# ]]; then
             debug "Skipping comment: $step"
             continue
+        fi
+
+        if [[ "$DRY_RUN" == true ]]; then
+            info "  → $step"
         fi
 
         execute_step "$step"
