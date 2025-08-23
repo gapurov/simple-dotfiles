@@ -17,13 +17,34 @@ Fork this repository or copy the main files to get started.
 ### Basic Commands
 
 ```bash
-./install.sh                   # Full installation
+./install.sh                   # Full installation (uses config.sh)
 ./install.sh --dry-run          # Preview changes without executing
 ./install.sh --verbose          # Detailed output with debug info
 ./run.sh -c config.sh          # Use run.sh directly with specific config
+cat config.sh | ./run.sh       # Pipe config via stdin
 ```
 
 ## Configuration
+
+Configuration must be provided via:
+
+- **Parameter**: `./run.sh -c config.sh`
+- **Pipe**: `cat config.sh | ./run.sh`
+
+No autodetection of config files is performed.
+
+**Config structure**
+
+```bash
+  LINKS=(
+    "source:target"
+    "source2:target2"
+  )
+  STEPS=(
+    "command"
+    "command2"
+  )
+```
 
 ### LINKS Array
 

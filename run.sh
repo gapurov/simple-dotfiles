@@ -58,18 +58,9 @@ determine_config() {
         REPO_DIR="$SCRIPT_DIR"
         debug "Reading config from stdin, using script dir as repo: $REPO_DIR"
     else
-        # Auto-detect config file
-        if [[ -f "$SCRIPT_DIR/config.sh" ]]; then
-            CONFIG_FILE="$SCRIPT_DIR/config.sh"
-            REPO_DIR="$SCRIPT_DIR"
-        elif [[ -f "$SCRIPT_DIR/../config.sh" ]]; then
-            CONFIG_FILE="$SCRIPT_DIR/../config.sh"
-            REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-        else
-            error "No config file found. Use -c option or ensure config.sh exists."
-            return 1
-        fi
-        debug "Auto-detected config file: $CONFIG_FILE"
+        # No autodetection - require explicit config file
+        error "No config file specified. Use -c option to specify a config file."
+        return 1
     fi
     
     # Convert to absolute path
@@ -85,18 +76,17 @@ USAGE:
     ./run.sh [OPTIONS]
 
 OPTIONS:
-    -c, --config <file>   Specify configuration file (default: auto-detect)
+    -c, --config <file>   Specify configuration file (required)
     -d, --dry-run         Show what would be done without executing
     -v, --verbose         Enable verbose output with debug information
     -h, --help           Show this help message
 
 EXAMPLES:
-    ./run.sh                              # Run with auto-detected config
-    ./run.sh -c myconfig.sh               # Run with specific config file
+    ./run.sh -c config.sh                 # Run with specific config file
     cat config.sh | ./run.sh              # Run with piped config
-    ./run.sh --dry-run                    # Preview changes without executing
-    ./run.sh --verbose                    # Detailed installation with debug info
-    ./run.sh --dry-run -v                 # Preview with verbose output
+    ./run.sh -c config.sh --dry-run       # Preview changes without executing
+    ./run.sh -c config.sh --verbose       # Detailed installation with debug info
+    ./run.sh -c config.sh --dry-run -v    # Preview with verbose output
 
 DESCRIPTION:
     This script reads configuration and performs:
@@ -108,7 +98,6 @@ DESCRIPTION:
     Configuration can be provided via:
     - Explicit file with -c/--config option
     - Piped input via stdin
-    - Auto-detection: config.sh in script directory or parent
 
 EOF
 }
