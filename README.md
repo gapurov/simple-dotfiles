@@ -37,6 +37,10 @@ Configuration can be provided via:
 **Config structure**
 
 ```bash
+  INIT=(
+    "initialization_command"
+    "setup_command"
+  )
   LINKS=(
     "source:target"
     "source2:target2"
@@ -46,6 +50,14 @@ Configuration can be provided via:
     "command2"
   )
 ```
+
+### INIT Array
+
+- Initialization commands executed before everything else
+- Run in current shell to preserve environment changes (unlike STEPS)
+- Perfect for sudo management, environment variables, prerequisites
+- Comments allowed with `#` prefix
+- **Optional** - if not defined, installation proceeds normally
 
 ### LINKS Array
 
@@ -63,6 +75,8 @@ Configuration can be provided via:
 
 ## Behavior
 
+- **Execution Order**: INIT → LINKS → STEPS (initialization runs before acquiring lock)
+- **Environment Preservation**: INIT commands run in current shell, preserving environment variables
 - **Backups**: Existing files are backed up to `~/.dotfiles-backup-YYYYmmdd-HHMMSS/` preserving original paths. Prefers `rsync -a` if available, falls back to portable `cp -pPR`.
 - **Idempotency**: Correct existing symlinks are left untouched. Regular files identical to sources are not backed up again before replacement.
 - **Locking**: Prevents concurrent runs using `~/.dotfiles-install.lock`. If a previous run crashed, remove the lock directory to proceed.

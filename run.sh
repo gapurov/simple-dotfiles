@@ -27,6 +27,7 @@ STEPS_ONLY=false
 CONFIG_FROM_STDIN=false
 
 # Global variables
+INIT_PROCESSED=0
 LINKS_PROCESSED=0
 STEPS_PROCESSED=0
 ERRORS_COUNT=0
@@ -138,10 +139,11 @@ EXAMPLES:
 
 DESCRIPTION:
     This script reads configuration and performs:
-    1. Creates symbolic links for dotfiles
-    2. Executes installation steps in order
-    3. Creates backups of existing files when necessary
-    4. Provides idempotent operation (safe to run multiple times)
+    1. Executes initialization steps (for setup like sudo management)
+    2. Creates symbolic links for dotfiles
+    3. Executes installation steps in order
+    4. Creates backups of existing files when necessary
+    5. Provides idempotent operation (safe to run multiple times)
 
     Configuration can be provided via:
     - Explicit file with -c/--config option
@@ -192,7 +194,18 @@ load_configuration() {
         fi
     fi
 
-    debug "Configuration loaded: ${#LINKS[@]} links, ${#STEPS[@]} steps"
+    # INIT is optional
+    if [[ -z ${INIT+x} ]]; then
+        debug "No INIT defined in configuration"
+        INIT=()
+    else
+        if ! declare -p INIT >/dev/null 2>&1 || [[ $(declare -p INIT 2>/dev/null) != declare\ -a* ]]; then
+            error "INIT must be an array in configuration file"
+            return 1
+        fi
+    fi
+
+    debug "Configuration loaded: ${#INIT[@]} init, ${#LINKS[@]} links, ${#STEPS[@]} steps"
 }
 
 # Resolve a path to an absolute path, optionally relative to a base directory
@@ -356,6 +369,101 @@ create_symlink() {
     return 0
 }
 
+execute_init() {
+    local init_command="$1"
+
+    debug "Executing init: $init_command"
+
+    if [[ "$DRY_RUN" == false ]]; then
+        # Change to repository root for execution
+        if ! cd "$REPO_DIR"; then
+            error "Failed to change to repository directory: $REPO_DIR"
+            return 1
+        fi
+
+        # Execute init in current shell to preserve environment changes
+        local exit_code=0
+        if [[ "$VERBOSE" == true ]]; then
+            set -x
+        fi
+
+        # Check if this is a sudo-helper.sh init command (needs special handling)
+        if [[ "$init_command" == *"sudo-helper.sh init"* ]]; then
+            # Source the sudo-helper script and call init_sudo function directly
+            local sudo_helper_path="${init_command%% *}"  # Extract path
+            if [[ -f "$sudo_helper_path" ]]; then
+                source "$sudo_helper_path"
+                init_sudo
+                exit_code=$?
+            else
+                error "Sudo helper script not found: $sudo_helper_path"
+                exit_code=1
+            fi
+        elif [[ "$init_command" == *"source "* ]] || [[ "$init_command" == *". "* ]]; then
+            # Source command directly in current shell
+            eval "$init_command"
+            exit_code=$?
+        else
+            # Execute command normally
+            bash -euo pipefail -c "$init_command"
+            exit_code=$?
+        fi
+
+        if [[ "$VERBOSE" == true ]]; then
+            set +x
+        fi
+
+        if [[ $exit_code -eq 0 ]]; then
+            success "Completed init: $init_command"
+            INIT_PROCESSED=$((INIT_PROCESSED + 1))
+            return 0
+        else
+            error "Init failed (exit code: $exit_code): $init_command"
+            return $exit_code
+        fi
+    else
+        INIT_PROCESSED=$((INIT_PROCESSED + 1))
+        return 0
+    fi
+}
+
+process_init() {
+    if [[ ${#INIT[@]} -eq 0 ]]; then
+        debug "No initialization steps to process"
+        return 0
+    fi
+
+    log "Processing initialization steps..."
+
+    if [[ "$DRY_RUN" == true ]]; then
+        info "DRY RUN: Showing all initialization steps that would be executed:"
+    fi
+
+    for init_step in "${INIT[@]}"; do
+        if [[ -z "$init_step" ]]; then
+            continue
+        fi
+
+        # Skip steps that start with # (comments)
+        if [[ "$init_step" =~ ^[[:space:]]*# ]]; then
+            debug "Skipping comment: $init_step"
+            continue
+        fi
+
+        if [[ "$DRY_RUN" == true ]]; then
+            info "  → $init_step"
+        fi
+
+        execute_init "$init_step"
+    done
+
+    if [[ $INIT_PROCESSED -gt 0 ]]; then
+        success "Processed $INIT_PROCESSED initialization steps"
+    else
+        warn "No initialization steps were processed"
+    fi
+}
+
 process_symlinks() {
     log "Processing symbolic links..."
 
@@ -459,6 +567,7 @@ process_steps() {
 
 show_summary() {
     log "Installation Summary"
+    printf "  Initialization steps: %d\n" "$INIT_PROCESSED"
     printf "  Symbolic links: %d\n" "$LINKS_PROCESSED"
     printf "  Installation steps: %d\n" "$STEPS_PROCESSED"
     printf "  Errors: %d\n" "$ERRORS_COUNT"
@@ -493,6 +602,11 @@ main() {
 
     validate_environment || exit 1
     load_configuration || exit 1
+
+    # Process initialization steps first (before acquiring lock)
+    # This allows init steps to set up things like sudo management
+    process_init || exit 1
+
     acquire_lock || exit 1
 
     if [[ "$STEPS_ONLY" == false ]]; then
