@@ -1,5 +1,13 @@
 # config.sh
 
+# 0) Initialization steps (optional - run first, before everything else)
+# These commands run in the current shell and can set environment variables.
+# Perfect for sudo management, environment setup, and prerequisites.
+# Uncomment the line below to enable sudo management (asks password once):
+INIT=(
+  # "./scripts/sudo-helper.sh init"  # Enables passwordless sudo for installation
+)
+
 # 1) Symlinks (repo-relative source : absolute-or-tilde destination)
 LINKS=(
   # Core developer tooling
@@ -19,6 +27,7 @@ LINKS=(
 
 # 2) Steps to run (executed in repo root, in order).
 #    Each step has a single clear purpose for better maintainability.
+#    If you enabled sudo management in INIT, these steps can use 'sudo' without prompting.
 STEPS=(
   # Keep submodules in sync (safe if no submodules)
   "git submodule update --init --recursive || true"
