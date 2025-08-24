@@ -1,5 +1,5 @@
 #!/bin/bash
-# Essential tools checker for macOS dotfiles installation
+# Tools checker for macOS dotfiles installation
 # Simplified macOS/Homebrew-only version
 
 set -euo pipefail
@@ -49,9 +49,9 @@ install_homebrew() {
 # Function to install tools using Homebrew
 install_tool() {
     local tool="$1"
-    
+
     debug "Installing $tool using Homebrew"
-    
+
     if brew install "$tool"; then
         return 0
     else
@@ -66,20 +66,20 @@ install_packages() {
     local script_dir
     script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     local brew_script="$script_dir/brew.sh"
-    
+
     if [[ ! -f "$brew_script" ]]; then
         error "brew.sh script not found at: $brew_script"
         return 1
     fi
-    
+
     if ! command_exists "brew"; then
         error "Homebrew is required but not installed"
         return 1
     fi
-    
+
     log "Installing packages via brew.sh..."
     info "This will install comprehensive development tools and applications"
-    
+
     if [[ "$NON_INTERACTIVE" != true ]] && [[ "$AUTO_INSTALL" != true ]]; then
         printf "%bProceed with package installation? [y/N]: %b" "$YELLOW" "$NC"
         read -r response
@@ -92,7 +92,7 @@ install_packages() {
                 ;;
         esac
     fi
-    
+
     if bash "$brew_script"; then
         success "Package installation completed successfully"
     else
@@ -124,7 +124,7 @@ ask_install() {
 # Function to show usage
 show_help() {
     cat << 'EOF'
-Essential Tools Checker for macOS Dotfiles
+Tools Checker for macOS Dotfiles
 
 USAGE:
     ./check-tools.sh [OPTIONS]
@@ -143,15 +143,15 @@ ENVIRONMENT VARIABLES:
     VERBOSE=true          Same as --verbose
 
 EXAMPLES:
-    ./check-tools.sh                    # Check essential tools and prompt for installation
+    ./check-tools.sh                    # Check tools and prompt for installation
     ./check-tools.sh --auto-install     # Check and auto-install missing tools
-    ./check-tools.sh --install-packages # Check essentials + install brew.sh packages
+    ./check-tools.sh --install-packages # Check tools + install brew.sh packages
     ./check-tools.sh --auto-install --install-packages # Full automated setup
 
 NOTES:
-    macOS-only script that ensures these essential tools are installed:
-    - brew, git, curl, bash
-    
+    macOS-only script that ensures these tools are installed:
+    - brew, git, curl, bash, jq, mas, zsh
+
     Homebrew will be auto-installed if missing.
     Use --install-packages for comprehensive development environment setup.
 
@@ -190,7 +190,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Main execution starts here
-log "Essential Tools Checker v$SCRIPT_VERSION (macOS)"
+log "Tools Checker v$SCRIPT_VERSION (macOS)"
 
 # Verify we're on macOS
 if [[ "$OSTYPE" != "darwin"* ]]; then
@@ -200,69 +200,80 @@ fi
 
 success "Running on macOS"
 
-# Define essential tools for dotfiles installation
-ESSENTIAL_TOOLS="brew git curl bash"
+# Define tools for dotfiles installation
+TOOLS="brew git curl bash jq mas zsh"
 
 # Track results
-missing_essential=()
+missing_tools=()
 failed_installs=()
 
-# Function to check and install essential tools
-check_and_install_essential() {
-    log "Checking essential tools for dotfiles installation..."
+# Function to check and install tools (essential + optional development)
+check_and_install_tools() {
+    log "Checking required tools for dotfiles installation..."
 
-    for tool in $ESSENTIAL_TOOLS; do
+    # Ensure Homebrew availability first
+    local brew_available=false
+    if command_exists "brew"; then
+        success "brew is installed"
+        brew_available=true
+    else
+        warn "brew is missing"
+        if ask_install "brew"; then
+            if install_homebrew && command_exists "brew"; then
+                success "brew installed successfully"
+                brew_available=true
+                # Don't add to missing_tools since it was installed successfully
+            else
+                error "Failed to install brew"
+                missing_tools+=("brew")
+                failed_installs+=("brew")
+            fi
+        else
+            info "Skipping installation of brew"
+            missing_tools+=("brew")
+        fi
+    fi
+
+    # Determine tools to check
+    local tools_to_check
+    tools_to_check="${*:-$TOOLS}"
+
+    # Check remaining tools (excluding brew)
+    for tool in $tools_to_check; do
+        if [[ "$tool" == "brew" ]]; then
+            continue
+        fi
+
         if command_exists "$tool"; then
             success "$tool is installed"
-        else
-            warn "$tool is missing"
-            missing_essential+=("$tool")
+            continue
+        fi
 
-            # Special handling for Homebrew
-            if [[ "$tool" == "brew" ]]; then
-                if ask_install "$tool"; then
-                    if install_homebrew; then
-                        if command_exists "$tool"; then
-                            success "$tool installed successfully"
-                        else
-                            error "$tool installation succeeded but command not found"
-                            failed_installs+=("$tool")
-                        fi
-                    else
-                        failed_installs+=("$tool")
-                    fi
-                else
-                    info "Skipping installation of $tool"
-                fi
+        warn "$tool is missing"
+        missing_tools+=("$tool")
+
+        if [[ "$brew_available" != true ]]; then
+            warn "Homebrew required to install $tool but not available"
+            failed_installs+=("$tool")
+            continue
+        fi
+
+        if ask_install "$tool"; then
+            info "Installing $tool..."
+            if install_tool "$tool" && command_exists "$tool"; then
+                success "$tool installed successfully"
             else
-                # Regular tools via Homebrew
-                if command_exists "brew"; then
-                    if ask_install "$tool"; then
-                        info "Installing $tool..."
-                        if install_tool "$tool"; then
-                            if command_exists "$tool"; then
-                                success "$tool installed successfully"
-                            else
-                                error "$tool installation succeeded but command not found"
-                                failed_installs+=("$tool")
-                            fi
-                        else
-                            failed_installs+=("$tool")
-                        fi
-                    else
-                        info "Skipping installation of $tool"
-                    fi
-                else
-                    warn "Homebrew required to install $tool but not available"
-                    failed_installs+=("$tool")
-                fi
+                error "$tool installation failed or command not found after install"
+                failed_installs+=("$tool")
             fi
+        else
+            info "Skipping installation of $tool"
         fi
     done
 }
 
-# Check essential tools
-check_and_install_essential
+# Check tools once
+check_and_install_tools $TOOLS
 
 # Install packages if requested
 if [[ "$INSTALL_PACKAGES" == true ]]; then
@@ -274,23 +285,23 @@ fi
 echo ""
 log "Installation Summary"
 
-# Count essential tools
+# Count tools
 total_tools=0
 installed_tools=0
 
-for tool in $ESSENTIAL_TOOLS; do
+for tool in $TOOLS; do
     total_tools=$((total_tools + 1))
     if command_exists "$tool"; then
         installed_tools=$((installed_tools + 1))
     fi
 done
 
-success "$installed_tools/$total_tools essential tools are installed"
+success "$installed_tools/$total_tools tools are installed"
 
 # Report missing essential tools
-if [[ ${#missing_essential[@]} -gt 0 ]]; then
-    error "Missing ESSENTIAL tools: ${missing_essential[*]}"
-    info "Essential tools are required for dotfiles installation"
+if [[ ${#missing_tools[@]} -gt 0 ]]; then
+    error "Missing tools: ${missing_tools[*]}"
+    info "These tools are required for dotfiles installation"
 fi
 
 # Report failed installations
@@ -300,7 +311,7 @@ if [[ ${#failed_installs[@]} -gt 0 ]]; then
 fi
 
 # Show next steps
-if [[ ${#missing_essential[@]} -gt 0 ]]; then
+if [[ ${#missing_tools[@]} -gt 0 ]]; then
     echo ""
     log "Next Steps"
     info "Run this script again with --auto-install to install missing tools automatically"
