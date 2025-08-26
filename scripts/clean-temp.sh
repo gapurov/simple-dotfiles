@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Clean temporary files and caches from development environment
 
 set -euo pipefail
@@ -36,9 +36,10 @@ safe_remove "$HOME/.m2/repository" "Maven repository cache"
 
 # Clean JS dev tool caches and versions
 safe_remove "$HOME/.bun/install/cache" "Bun cache"
-safe_remove "$HOME/.bun/install/global" "Bun global installs"
-safe_remove "$HOME/.pnpm" "pnpm store/cache"
-safe_remove "$HOME/Library/Application Support/fnm/node-versions" "fnm Node.js versions"
+# Intentionally do not remove Bun global installs or fnm-installed Node versions
+# as they are part of the active toolchain, not caches.
+# safe_remove "$HOME/.bun/install/global" "Bun global installs"
+# safe_remove "$HOME/Library/Application Support/fnm/node-versions" "fnm Node.js versions"
 safe_remove "$HOME/.local/state/fnm_multishells" "fnm multishells state"
 
 # Clean temporary files
