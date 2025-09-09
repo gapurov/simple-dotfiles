@@ -1,6 +1,6 @@
 # Simple Dotfiles
 
-Very simple dotfiles installer.
+Very simple dotfiles inspired by [dotbot](https://github.com/anishathalye/dotbot).
 
 ## Core Files
 
